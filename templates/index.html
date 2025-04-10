@@ -10,8 +10,8 @@
 </head>
 <body>
     <h1>Hand Sign Recognition</h1>
-    <video id="video" width="640" height="480" autoplay></video>
-    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+    <video id="video" width="320" height="240" autoplay></video>
+    <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
     <p id="prediction">Waiting for prediction...</p>
     <script>
         const video = document.getElementById('video');
@@ -19,36 +19,37 @@
         const ctx = canvas.getContext('2d');
         const predictionEl = document.getElementById('prediction');
 
-        // Access webcam
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => {
                 video.srcObject = stream;
                 console.log("Webcam stream started successfully");
+                startPredictions();
             })
             .catch(err => {
                 console.error("Error accessing webcam:", err);
                 predictionEl.textContent = "Error: Could not access webcam";
             });
 
-        // Send frames to server
-        setInterval(async () => {
-            console.log("Attempting to send frame to /predict"); // Debug log
-            ctx.drawImage(video, 0, 0, 640, 480);
-            const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
-            try {
-                const response = await fetch('/predict', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'frame=' + encodeURIComponent(imageData)
-                });
-                const result = await response.text();
-                console.log("Prediction received:", result); // Debug log
-                predictionEl.textContent = result;
-            } catch (error) {
-                console.error("Prediction error:", error);
-                predictionEl.textContent = "Error: Server not responding";
-            }
-        }, 100); // Adjust interval for performance
+        function startPredictions() {
+            setInterval(async () => {
+                console.log("Attempting to send frame to /predict");
+                ctx.drawImage(video, 0, 0, 320, 240);
+                const imageData = canvas.toDataURL('image/jpeg', 0.5).split(',')[1]; // Lower quality
+                try {
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'frame=' + encodeURIComponent(imageData)
+                    });
+                    const result = await response.text();
+                    console.log("Prediction received:", result);
+                    predictionEl.textContent = result;
+                } catch (error) {
+                    console.error("Prediction error:", error);
+                    predictionEl.textContent = "Error: Server not responding";
+                }
+            }, 500); // Slower interval (500ms)
+        }
     </script>
 </body>
 </html>
